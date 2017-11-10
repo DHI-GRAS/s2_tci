@@ -32,6 +32,7 @@ def download_file(url, outdir, session):
 
 
 def stream_file(url, session):
+    fname = _fname_from_url(url)
     with session.get(url, stream=True) as response:
         response.raise_for_status()
-        return response.content
+        return response.content, fname

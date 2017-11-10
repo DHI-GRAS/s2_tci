@@ -1,3 +1,7 @@
+import logging
+
+logger = logging.getLogger(__name__)
+
 QUERY_KW = {
         'platformname': 'Sentinel-2',
         'producttype': 'S2MSI1C'}
@@ -28,5 +32,6 @@ def query_s2(api, area_geom, cloud_max=None, **query_kw):
     if cloud_max is not None:
         kw['cloudcoverpercentage'] = (0, cloud_max)
     kw.update(query_kw)
+    logger.debug(api.format_query(area=area_wkt, **kw))
     results = api.query(area=area_wkt, **kw)
     return results

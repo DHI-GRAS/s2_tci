@@ -1,6 +1,7 @@
 import logging
 import functools
 import concurrent.futures
+from contextlib import closing
 
 import tqdm
 import sentinelsat
@@ -35,11 +36,12 @@ def download_tci(username, password, area_geom, outdir, **query_kw):
 
 def stream_tci(username, password, area_geom, outdir, **query_kw):
     api = sentinelsat.SentinelAPI(user=username, password=password)
-    session = api.session
 
     logger.info('Querying SciHub')
     results = query.query_s2(api, area_geom, **query_kw)
     logger.info('Found %d products', len(results))
 
-    for url in (find.get_tci_url(res, session=session) for res in results.values()):
-        yield download.stream_file(url, session=session)
+    with closing(api.session) as session:
+        url_generator = (find.get_tci_url(res, session=session) for res in results.values())
+        for url in url_generator:
+            yield download.stream_file(url, session=session)

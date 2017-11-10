@@ -1,5 +1,6 @@
 import posixpath
 import logging
+import warnings
 
 from lxml import etree
 
@@ -35,32 +36,35 @@ def get_tci_download_url(product_url, product_title, session):
 
     tree = etree.fromstring(granules_xml)
     entries = tree.findall('.//{*}entry')
-    e = entries[0]
-    granule = e.find(".//{*}link[@title='Node']")
-    gnode = granule.attrib['href']
-
-    imgdata_url = posixpath.join(
-        posixpath.dirname(granules_url),
-        gnode,
-        'Nodes(\'IMG_DATA\')',
-        'Nodes')
-    logger.debug(imgdata_url)
-
-    r = session.get(imgdata_url)
-    imgdata_xml = r.text.encode('utf-8')
-
-    tree = etree.fromstring(imgdata_xml)
-    links = tree.findall('.//{*}entry/{*}link[@type="application/octet-stream"]')
-
     tcinode_value = None
-    for link in links:
-        href = link.attrib['href']
-        if '_TCI.jp2' in posixpath.basename(href):
-            tcinode_value = href
+    for e in entries:
+        granule = e.find(".//{*}link[@title='Node']")
+        gnode = granule.attrib['href']
+
+        imgdata_url = posixpath.join(
+            posixpath.dirname(granules_url),
+            gnode,
+            'Nodes(\'IMG_DATA\')',
+            'Nodes')
+        logger.debug(imgdata_url)
+
+        r = session.get(imgdata_url)
+        imgdata_xml = r.text.encode('utf-8')
+
+        tree = etree.fromstring(imgdata_xml)
+        links = tree.findall('.//{*}entry/{*}link[@type="application/octet-stream"]')
+
+        for link in links:
+            href = link.attrib['href']
+            if '_TCI.jp2' in href:
+                tcinode_value = href
+                break
+        if tcinode_value:
             break
 
     if tcinode_value is None:
-        raise RuntimeError('Could not find link to TCI file')
+        warnings.warn('Could not find link to TCI file')
+        return None
 
     tci_download_url = posixpath.join(
         posixpath.dirname(imgdata_url),
@@ -93,7 +97,7 @@ def get_tci_url(result_dict, session):
         TCI download URL
     """
     try:
-        return tci_url_from_result(result, session)
+        return tci_url_from_result(result_dict, session)
     except Exception as e:
         logger.exception('Problem processing result')
         return None
