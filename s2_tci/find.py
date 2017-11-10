@@ -6,7 +6,7 @@ from lxml import etree
 logger = logging.getLogger(__name__)
 
 
-def get_tci_download_url(product_url, product_title, s):
+def get_tci_download_url(product_url, product_title, session):
     """Get TCI download URL from tracing a product URL
 
     Parameters
@@ -30,7 +30,7 @@ def get_tci_download_url(product_url, product_title, s):
         'Nodes')
     logger.debug(granules_url)
 
-    r = s.get(granules_url)
+    r = session.get(granules_url)
     granules_xml = r.text.encode('utf-8')
 
     tree = etree.fromstring(granules_xml)
@@ -46,13 +46,21 @@ def get_tci_download_url(product_url, product_title, s):
         'Nodes')
     logger.debug(imgdata_url)
 
-    r = s.get(imgdata_url)
+    r = session.get(imgdata_url)
     imgdata_xml = r.text.encode('utf-8')
 
     tree = etree.fromstring(imgdata_xml)
     links = tree.findall('.//{*}entry/{*}link[@type="application/octet-stream"]')
-    hrefs = [l.attrib['href'] for l in links]
-    tcinode_value = [h for h in hrefs if '_TCI.jp2' in h][0]
+
+    tcinode_value = None
+    for link in links:
+        href = link.attrib['href']
+        if '_TCI.jp2' in posixpath.basename(href):
+            tcinode_value = href
+            break
+
+    if tcinode_value is None:
+        raise RuntimeError('Could not find link to TCI file')
 
     tci_download_url = posixpath.join(
         posixpath.dirname(imgdata_url),
@@ -61,34 +69,31 @@ def get_tci_download_url(product_url, product_title, s):
     return tci_download_url
 
 
-def tci_url_from_result(result, s):
+def tci_url_from_result(result, session):
     product_url = posixpath.dirname(result['link'])
     return get_tci_download_url(
         product_url=product_url,
         product_title=result['title'],
-        s=s)
+        session=session)
 
 
-def get_tci_urls(result_dicts, s):
-    """Get TCI URLs for sentinelsat query result dicts
+def get_tci_url(result_dict, session):
+    """Get TCI URLs for sentinelsat query result dict
 
     Parameters
     ----------
-    result_dicts : iterable of dict
-        result dictionaries
+    result_dict : dict
+        result dictionary
     s : requests.Session
         session
 
     Returns
     -------
-    list of str
-        TCI download URLs
+    str
+        TCI download URL
     """
-    urls = []
-    for result in result_dicts:
-        try:
-            urls.append(tci_url_from_result(result, s))
-        except Exception as e:
-            logger.exception('Problem processing result.')
-            continue
-    return urls
+    try:
+        return tci_url_from_result(result, session)
+    except Exception as e:
+        logger.exception('Problem processing result')
+        return None

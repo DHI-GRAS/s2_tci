@@ -5,14 +5,14 @@ import shutil
 
 def _fname_from_url(url):
     try:
-        return re.search('([\w_]*?_TCI.jp2)', url).group(1)
+        return re.search(r'([\w_]*?_TCI.jp2)', url).group(1)
     except AttributeError:
         raise ValueError('Unable to get TCI file name from URL "{}".'.format(url))
 
 
-def download_file(url, target, s):
+def _download_file(url, target, session):
     target_incomplete = target + '.incomplete'
-    with s.get(url, stream=True) as response:
+    with session.get(url, stream=True) as response:
         response.raise_for_status()
         with open(target_incomplete, "wb") as target_file:
             shutil.copyfileobj(response.raw, target_file)
@@ -23,12 +23,15 @@ def download_file(url, target, s):
     return target
 
 
-def download_urls(urls, outdir, s):
-    targets = []
-    for url in urls:
-        fname = _fname_from_url(url)
-        target = os.path.join(outdir, fname)
-        if not os.path.isfile(target):
-            download_file(url, target, s=s)
-        targets.append(target)
-    return targets
+def download_file(url, outdir, session):
+    fname = _fname_from_url(url)
+    target = os.path.join(outdir, fname)
+    if not os.path.isfile(target):
+        _download_file(url, target, session=session)
+    return target
+
+
+def stream_file(url, session):
+    with session.get(url, stream=True) as response:
+        response.raise_for_status()
+        return response.content
