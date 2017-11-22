@@ -3,8 +3,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 QUERY_KW = {
-        'platformname': 'Sentinel-2',
-        'producttype': 'S2MSI1C'}
+    'platformname': 'Sentinel-2',
+    'producttype': 'S2MSI1C'
+}
 
 
 def query_s2(api, area_geom, cloud_max=None, **query_kw):

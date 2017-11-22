@@ -31,8 +31,9 @@ def get_tci_download_url(product_url, product_title, session):
         'Nodes')
     logger.debug(granules_url)
 
-    r = session.get(granules_url)
-    granules_xml = r.text.encode('utf-8')
+    with session.get(granules_url) as r:
+        r.raise_for_status()
+        granules_xml = r.text.encode('utf-8')
 
     tree = etree.fromstring(granules_xml)
     entries = tree.findall('.//{*}entry')
@@ -48,8 +49,9 @@ def get_tci_download_url(product_url, product_title, session):
             'Nodes')
         logger.debug(imgdata_url)
 
-        r = session.get(imgdata_url)
-        imgdata_xml = r.text.encode('utf-8')
+        with session.get(imgdata_url) as r:
+            r.raise_for_status()
+            imgdata_xml = r.text.encode('utf-8')
 
         tree = etree.fromstring(imgdata_xml)
         links = tree.findall('.//{*}entry/{*}link[@type="application/octet-stream"]')
