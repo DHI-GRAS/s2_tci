@@ -1,6 +1,5 @@
 import posixpath
 import logging
-import warnings
 
 from lxml import etree
 
@@ -63,9 +62,7 @@ def get_tci_download_url(product_url, product_title, session):
                 break
         if tcinode_value:
             break
-
-    if tcinode_value is None:
-        warnings.warn('Could not find link to TCI file')
+    else:
         return None
 
     tci_download_url = posixpath.join(
